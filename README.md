@@ -19,6 +19,16 @@ To debug the API, you can run it directly in your terminal and have the (error) 
 
 `cd /vagrant/api && npm start`
 
+## API
+
+### Listing bills
+
+`/api/bill/list`
+
+### Get a specific bill
+
+`/api/bill/get/:legislature/:number`
+
 ## Licence
 
 MIT
