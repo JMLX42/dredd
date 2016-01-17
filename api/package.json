@@ -1,0 +1,21 @@
+{
+  "name": "anapi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+      "start": "nodemon -w models -w routes -w templates -w helpers -w index.js -d 2 index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+      "request": "latest",
+      "striptags": "latest",
+      "html-entities": "latest",
+      "iconv-lite": "latest",
+      "node-getopt": "latest",
+      "keystone": "^0.3.13",
+      "model-transform": "^1.1.0",
+      "async": "latest"
+  }
+}

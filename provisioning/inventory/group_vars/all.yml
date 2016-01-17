@@ -1,0 +1,14 @@
+project_name: anapi
+
+data_dir: /var/data
+backup_dir: /var/backup
+www_dir: /var/www
+download_dir: /opt/download
+project_dir: /opt/{{ project_name }}
+
+api_web_private_host: 127.0.0.1
+api_web_private_port: 3000
+api_db_private_host: 127.0.0.1
+api_db_private_port: 27017
+
+anapi_api_dir: /vagrant/api

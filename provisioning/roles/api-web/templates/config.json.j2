@@ -1,0 +1,10 @@
+{
+{% if is_development_environment %}
+    "env": "development",
+{% else %}
+    "env": "production",
+{% endif %}
+    "mongo" : {
+      "uri" : "mongodb://{{ api_db_private_host }}/{{ mongodb_database_name }}"
+    }
+}

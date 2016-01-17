@@ -1,0 +1,173 @@
+var keystone = require('keystone');
+var async = require('async');
+var striptags = require('striptags');
+var Entities = require('html-entities').AllHtmlEntities;
+var iconv  = require('iconv-lite');
+var request  = require('request');
+
+var Bill = keystone.list('Bill');
+
+module.exports = function(legislature, done)
+{
+    console.log('importing bills for legislature', legislature);
+
+    fetchBillNumbers(
+        legislature,
+        function(numbers)
+        {
+            console.log(numbers.length + ' bills to import');
+
+            var numImportedBills = 0;
+
+            var ops = numbers.map(function(number)
+            {
+                return function(callback)
+                {
+                    console.log(
+                        '(' + ++numImportedBills + '/' + numbers.length
+                        + ') importing bill ' + number
+                    );
+                    Bill.model.findOne({legislature : legislature, number : number})
+                        .exec(function(err, bill)
+                        {
+                            if (err)
+                                return callback(err);
+
+                            if (!bill)
+                            {
+                                fetchBillMarkdown(
+                                    legislature,
+                                    number,
+                                    function(md)
+                                    {
+                                        bill = Bill.model({
+                                            legislature: legislature,
+                                            number: number,
+                                            text: { md: md }
+                                        });
+
+                                        bill.save(function(err)
+                                        {
+                                            console.log('\tok: imported');
+                                            return callback(err);
+                                        });
+                                    },
+                                    function(body)
+                                    {
+                                        console.log('\terror: could not import');
+                                        return callback();
+                                    }
+                                );
+                            }
+                            else
+                            {
+                                console.log('\tskip: already imported');
+                                return callback();
+                            }
+                        });
+                };
+            });
+
+            async.waterfall(ops, function(error)
+            {
+                if (error)
+                    console.log(error);
+
+                done();
+            });
+        }
+    );
+}
+
+function fetchBillNumbers(legislature, callback)
+{
+    request(
+        {
+            uri: "http://www.assemblee-nationale.fr/"
+                + legislature
+                + "/documents/index-projets.asp"
+        },
+        function(error, response, body)
+        {
+            var projectAnchors = null;
+            var re = new RegExp(
+                '<a href="/' + legislature + '/projets/pl(\\\d+).asp"',
+                'g'
+            );
+
+            var numbers = [];
+
+            while ((projectAnchors = re.exec(body)) !== null)
+                numbers.push(parseInt(projectAnchors[1]));
+
+            callback(numbers);
+        }
+    );
+}
+
+function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
+{
+    request(
+        {
+            uri: "http://www.assemblee-nationale.fr/"
+                + legislature
+                + "/projets/pl"
+                + id
+                + ".asp",
+            encoding: null
+        },
+        function(error, response, body)
+        {
+            var text = iconv.decode(new Buffer(body), "ISO-8859-1");
+            var begin = text.indexOf(
+                '<!-- Contenu -->',
+                text.indexOf('<div style="margin-left: 2%; margin-right: 2%; margin-top: 2%; width: 95%">')
+            );
+            var end = text.indexOf('<hr size="1" noshade>');
+
+            if (begin < 0 || end < 0 || end < begin)
+                return errorCallback && errorCallback(body);
+
+            text = text.substring(begin, end);
+
+            // get only the actual text without the preamble
+            // text = text.substring(
+            //     text.indexOf('TITRE I<sup>ER</sup>'),
+            //     text.indexOf('<hr size="1" noshade>')
+            // );
+
+            // replace <b> HTML tags with ** md tags
+            text = text.replace(/<b>(\s*)(\S+.*)(\s*)<\/b>/g, '$1**$2**$3')
+                .replace(/\*\*(\s)\*\*/g, '$1');
+
+            // replace <i> HTML tags with * md tags
+            text = text.replace(/<\/?i>/g, '*');
+
+            // strip all HTML tags
+            text = striptags(text);
+
+            // remove horizontal rules made of undercores
+            text = text.replace(/^\*\*_+\*\*$/gm, '');
+
+            // replace em dash with md list
+            text = text.replace(/^&#8211;/gm, '*');
+
+            // decode HTML entities
+            text = new Entities().decode(text);
+            // remove Windows nl
+            text = text.replace(/\r/gm, '');
+            // trim whitespaces
+            text = text.trim();
+
+            // setup md headers
+            text = text.replace(/^PROJET DE LOI/gm, '# PROJET DE LOI');
+            text = text.replace(/^TITRE /gm, '## TITRE ');
+            text = text.replace(/^Chapitre /gm, '### Chapitre ');
+            text = text.replace(/^Section /gm, '#### Section ');
+            text = text.replace(/^\*\*Article (.*)\*\*/gm, '##### Article $1');
+            text = text.replace(/^([IXVCM]+)\./gm, '###### $1.');
+            // text = text.replace(/^([0-9]+)°/gm, '####### $1°');
+
+            successCallback(text);
+        });
+}
