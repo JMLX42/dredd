@@ -6,6 +6,7 @@ A RESTful API to fetch data from the French "Assemblée Nationale".
 
 * List bills.
 * Get the text for a specific bill.
+* Pretty bill texts available in Markdown and HTML.
 
 ## Install
 
