@@ -1,3 +1,12 @@
+# ANAPI (Assemblée Nationale API)
+
+A RESTful API to fetch data from the French "Assemblée Nationale".
+
+## Features
+
+* List bills.
+* Get the text for a specific bill.
+
 ## Install
 
 * Install [VirtualBox 4.3+](https://www.virtualbox.org/wiki/Downloads).
