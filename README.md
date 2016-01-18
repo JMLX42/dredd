@@ -17,6 +17,14 @@ A RESTful API to fetch data from the French "Assemblée Nationale".
 * Add `192.168.50.43 anapi.fr.test` to your hosts file.
 * Go to [http://anapi.fr.test](http://anapi.fr.test) to test the platform.
 
+## Upgrade
+
+In the project root directory:
+
+* Shutdown the VM: `vagrant halt local`.
+* Update the code: `git pull`.
+* Restart the VM and provision it: `vagrant up --provision`.
+
 ## Building and running
 
 All the following procedures are to be executed on the dev environment VM using SSH. To connect to the VM using SSH, use the `vagrant ssh local` command in the install directory.
@@ -33,8 +41,8 @@ To debug the API, you can run it directly in your terminal and have the (error) 
 
 The admin interface is available at [http://anapi.fr.test/keystone](http://anapi.fr.test/keystone). You must sign in with the following credentials:
 
-* e-mail: admin@anapi.fr.test
-* password: admin
+* e-mail: `admin@anapi.fr.test`
+* password: `admin`
 
 ## API
 
@@ -65,6 +73,7 @@ The admin interface is available at [http://anapi.fr.test/keystone](http://anapi
 
 * `:legislature`, the number of the legislature of the bill
 * `:number`, the number of the bill
+* `format`, the expected format of the bill text (`md` or `html`)
 
 #### Examples
 

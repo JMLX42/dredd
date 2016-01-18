@@ -16,6 +16,7 @@
       "node-getopt": "latest",
       "keystone": "^0.3.13",
       "model-transform": "^1.1.0",
-      "async": "latest"
+      "async": "latest",
+      "marked": "latest"
   }
 }

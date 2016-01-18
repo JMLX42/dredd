@@ -41,9 +41,9 @@ module.exports = function(legislature, force, done)
                                 fetchBillMarkdown(
                                     legislature,
                                     number,
-                                    function(md)
+                                    function(text)
                                     {
-                                        var registrationDate = getRegistrationDate(md);
+                                        var registrationDate = getRegistrationDate(text);
 
                                         if (registrationDate === null)
                                             console.log('\terror: could not parse recording date');
@@ -53,14 +53,14 @@ module.exports = function(legislature, force, done)
                                             bill = Bill.model({
                                                 legislature: legislature,
                                                 number: number,
-                                                text: { md: md },
+                                                text: text,
                                                 registrationDate: registrationDate,
                                                 importDate: Date.now()
                                             });
                                         }
                                         else
                                         {
-                                            bill.md = md;
+                                            bill.text = text;
                                             bill.registrationDate = registrationDate;
                                             bill.importDate = Date.now();
                                         }
@@ -162,27 +162,14 @@ function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
 
             text = text.substring(begin, end);
 
-            // get only the actual text without the preamble
-            // text = text.substring(
-            //     text.indexOf('TITRE I<sup>ER</sup>'),
-            //     text.indexOf('<hr size="1" noshade>')
-            // );
-
-            // replace <b> HTML tags with ** md tags
-            text = text.replace(/<b>(\s*)(\S+.*)(\s*)<\/b>/g, '$1**$2**$3')
-                .replace(/\*\*(\s)\*\*/g, '$1');
-
-            // replace <i> HTML tags with * md tags
-            text = text.replace(/<\/?i>/g, '*');
-
             // strip all HTML tags
             text = striptags(text);
 
             // remove horizontal rules made of undercores
             text = text.replace(/^\*\*_+\*\*$/gm, '');
 
-            // replace em dash with md list
-            text = text.replace(/^&#8211;/gm, '*');
+            // replace em dash with an actual dash
+            text = text.replace(/^&#8211;/gm, '-');
 
             // decode HTML entities
             text = new Entities().decode(text);
@@ -191,27 +178,18 @@ function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
             // trim whitespaces
             text = text.trim();
 
-            // setup md headers
-            text = text.replace(/^PROJET DE LOI/gm, '# PROJET DE LOI');
-            text = text.replace(/^TITRE /gm, '## TITRE ');
-            text = text.replace(/^Chapitre /gm, '### Chapitre ');
-            text = text.replace(/^Section /gm, '#### Section ');
-            text = text.replace(/^\*\*Article (.*)\*\*/gm, '##### Article $1');
-            text = text.replace(/^([IXVCM]+)\./gm, '###### $1.');
-            // text = text.replace(/^([0-9]+)°/gm, '####### $1°');
-
             successCallback(text);
         });
 }
 
-function getRegistrationDate(md)
+function getRegistrationDate(text)
 {
     var months = [
         'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
         'août', 'septembre', 'octobre', 'novembre', 'décembre'
     ];
     var re = /^\s*Enregistré à la présidence\sde l['’]Assemblée nationale\s+le (\d+|1er)\s+(.+)\s+(\d{4})\s*\.?$/im;
-    var match = re.exec(md);
+    var match = re.exec(text);
 
     if (!match)
         return null;

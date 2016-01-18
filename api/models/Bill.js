@@ -11,7 +11,7 @@ Bill.add({
     number: { type: Types.Number, required: true, initial: true },
     registrationDate: { type: Types.Date, required: true, initial: true },
     importDate: { type: Types.Datetime, required: true, initial: true },
-	text: { type: Types.Markdown, wysiwyg: true, height: 400 }
+	text: { type: Types.Textarea, height: 400 }
 });
 
 transform.toJSON(Bill);
