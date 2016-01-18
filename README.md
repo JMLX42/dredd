@@ -1,4 +1,4 @@
-# ANAPI (Assemblée Nationale API)
+# Dredd - "I am the Law!"
 
 A RESTful API to fetch data from the French "Assemblée Nationale".
 
@@ -12,10 +12,10 @@ A RESTful API to fetch data from the French "Assemblée Nationale".
 
 * Install [VirtualBox 4.3+](https://www.virtualbox.org/wiki/Downloads).
 * Install [Vagrant 1.8.1+](https://docs.vagrantup.com/v2/installation/).
-* `git clone https://github.com/promethe42/anapi.git && cd anapi`
+* `git clone https://github.com/promethe42/dredd.git && cd dredd`
 * `vagrant up local` (run as admin on Windows)
-* Add `192.168.50.43 anapi.fr.test` to your hosts file.
-* Go to [http://anapi.fr.test](http://anapi.fr.test) to test the platform.
+* Add `192.168.50.43 dredd.fr.test` to your hosts file.
+* Go to [http://dredd.fr.test](http://dredd.fr.test) to test the platform.
 
 ## Upgrade
 
@@ -31,7 +31,7 @@ All the following procedures are to be executed on the dev environment VM using 
 
 The Web API should build and run when the install is done but also whenever you start the machine. You can also manually control the process as a service:
 
-`service anapi-api-web stop` (or `start` or `restart`)
+`service dredd-api-web stop` (or `start` or `restart`)
 
 To debug the API, you can run it directly in your terminal and have the (error) logs:
 
@@ -39,9 +39,9 @@ To debug the API, you can run it directly in your terminal and have the (error) 
 
 ## Admin
 
-The admin interface is available at [http://anapi.fr.test/keystone](http://anapi.fr.test/keystone). You must sign in with the following credentials:
+The admin interface is available at [http://dredd.fr.test/keystone](http://dredd.fr.test/keystone). You must sign in with the following credentials:
 
-* e-mail: `admin@anapi.fr.test`
+* e-mail: `admin@dredd.fr.test`
 * password: `admin`
 
 ## API

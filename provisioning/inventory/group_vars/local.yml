@@ -1,5 +1,5 @@
 environment_name: local
-front_hostname: anapi.fr.test
+front_hostname: dredd.fr.test
 front_web_public_host: "{{ front_hostname }}"
 hostname: "{{ front_hostname }}-{{ environment_name }}"
 is_development_environment: yes

@@ -18,7 +18,7 @@
 {% endif %}
 
     # Including all additional rewrite rule configurations set by roles.
-    IncludeOptional     /etc/apache2/sites-available/anapi-front-web-include/*.conf
+    IncludeOptional     /etc/apache2/sites-available/{{ project_name}}-front-web-include/*.conf
 
     #
     # Compression

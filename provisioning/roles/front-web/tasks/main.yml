@@ -42,7 +42,7 @@
   when: environment_name == 'staging'
 
 - name: install site configuration
-  template: src={{ project_name }}-{{ role_name }}.conf.j2 dest=/etc/apache2/sites-available/{{ project_name }}-{{ role_name }}.conf
+  template: src={{ role_name }}.conf.j2 dest=/etc/apache2/sites-available/{{ project_name }}-{{ role_name }}.conf
   notify:
     - restart apache2 service
 

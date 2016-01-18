@@ -9,10 +9,10 @@
 
 # Windows hosts won't handle creating an actual dir, but it's ok to create a symlink
 - file: path={{ project_dir }}/{{ role_name }}/node_modules state=directory recurse=yes
-- file: src={{ project_dir }}/{{ role_name }}/node_modules dest={{ anapi_api_dir }}/node_modules state=link
+- file: src={{ project_dir }}/{{ role_name }}/node_modules dest={{ dredd_api_dir }}/node_modules state=link
 
 - name: install npm modules
-  npm: path={{ anapi_api_dir }}
+  npm: path={{ dredd_api_dir }}
 
 - name: install headstone
   npm: name=headstone version=1.1.0 global=yes
@@ -22,47 +22,47 @@
   template: src=.env.j2 dest={{ project_dir }}/{{ role_name }}/.env
 
 - name: link .env file
-  file: src={{ project_dir }}/{{ role_name }}/.env dest={{ anapi_api_dir }}/.env state=link
+  file: src={{ project_dir }}/{{ role_name }}/.env dest={{ dredd_api_dir }}/.env state=link
 
 - name: generate app configuration
   template: src=config.json.j2 dest={{ project_dir }}/{{ role_name }}/config.json
   notify:
-    - restart anapi-api-web service
+    - restart dredd-api-web service
 
 - name: link app configuration
-  file: src={{ project_dir }}/{{ role_name }}/config.json dest={{ anapi_api_dir }}/config.json state=link
+  file: src={{ project_dir }}/{{ role_name }}/config.json dest={{ dredd_api_dir }}/config.json state=link
 
 - name: create admin user
   when: is_development_environment
-  shell: headstone {{ anapi_api_dir }}/scripts/add-user.js
-    --cwd={{ anapi_api_dir }}
+  shell: headstone {{ dredd_api_dir }}/scripts/add-user.js
+    --cwd={{ dredd_api_dir }}
     --userEmail={{ api_web_admin_email }}
     --userPassword={{ api_web_admin_password }}
     --userName={{ api_web_admin_name }} --userIsAdmin=true
     --mongoUri=mongodb://{{ api_db_private_host }}/{{ mongodb_database_name }}
   args:
-    chdir: "{{ anapi_api_dir }}"
+    chdir: "{{ dredd_api_dir }}"
   register: result
   changed_when: "'created' in result.stdout"
   failed_when: result.stderr
 
 - name: initialize bill database
-  shell: headstone {{ anapi_api_dir }}/scripts/import-bills.js --legislature 14
+  shell: headstone {{ dredd_api_dir }}/scripts/import-bills.js --legislature 14
   args:
-    chdir: "{{ anapi_api_dir }}"
+    chdir: "{{ dredd_api_dir }}"
   register: result
   changed_when: "'ok: imported' in result.stdout"
   failed_when: result.stderr
 
 - name: install upstart script
-  template: src={{ project_name }}-{{ role_name }}.upstart.conf.j2 dest=/etc/init/{{ project_name }}-{{ role_name }}.conf
+  template: src={{ role_name }}.upstart.conf.j2 dest=/etc/init/{{ project_name }}-{{ role_name }}.conf
   notify:
-    - restart anapi-api-web service
+    - restart dredd-api-web service
 
 - name: install redis server
   apt: name=redis-server state=present
 
 - name: install site configuration
-  template: src={{ project_name }}-{{ role_name }}.conf.j2 dest=/etc/apache2/sites-available/anapi-front-web-include/{{ project_name }}-{{ role_name }}.conf
+  template: src={{ role_name }}.conf.j2 dest=/etc/apache2/sites-available/{{ project_name }}-front-web-include/{{ project_name }}-{{ role_name }}.conf
   notify:
     - restart apache2 service
