@@ -7,9 +7,12 @@ var request  = require('request');
 
 var Bill = keystone.list('Bill');
 
-module.exports = function(legislature, done)
+module.exports = function(legislature, force, done)
 {
     console.log('importing bills for legislature', legislature);
+
+    var numErrors = 0;
+    var numSkipped = 0;
 
     fetchBillNumbers(
         legislature,
@@ -33,18 +36,35 @@ module.exports = function(legislature, done)
                             if (err)
                                 return callback(err);
 
-                            if (!bill)
+                            if (!bill || force == 'true')
                             {
                                 fetchBillMarkdown(
                                     legislature,
                                     number,
                                     function(md)
                                     {
-                                        bill = Bill.model({
-                                            legislature: legislature,
-                                            number: number,
-                                            text: { md: md }
-                                        });
+                                        var recordingDate = getRecordingDate(md);
+
+                                        if (recordingDate === null)
+                                            console.log('\terror: could not parse recording date');
+
+                                        if (!bill)
+                                        {
+                                            bill = Bill.model({
+                                                legislature: legislature,
+                                                number: number,
+                                                text: { md: md },
+                                                recordingDate: recordingDate,
+                                                importDate: Date.now()
+                                            });
+                                        }
+                                        else
+                                        {
+                                            bill.md = md;
+                                            bill.recordingDate = recordingDate;
+                                            bill.importDate = Date.now();
+                                        }
+                                        console.log(getRecordingDate(md));
 
                                         bill.save(function(err)
                                         {
@@ -54,7 +74,10 @@ module.exports = function(legislature, done)
                                     },
                                     function(body)
                                     {
-                                        console.log('\terror: could not import');
+                                        console.log('\terror: could not parse text');
+
+                                        numErrors++;
+
                                         return callback();
                                     }
                                 );
@@ -62,6 +85,9 @@ module.exports = function(legislature, done)
                             else
                             {
                                 console.log('\tskip: already imported');
+
+                                numSkipped++;
+
                                 return callback();
                             }
                         });
@@ -72,6 +98,13 @@ module.exports = function(legislature, done)
             {
                 if (error)
                     console.log(error);
+
+                console.log(
+                    'total: ' + numbers.length
+                    + ', success: ' + (numbers.length - numErrors - numSkipped)
+                    + ', skipped: ' + numSkipped
+                    + ', error: ' + numErrors
+                );
 
                 done();
             });
@@ -170,4 +203,23 @@ function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
 
             successCallback(text);
         });
+}
+
+function getRecordingDate(md)
+{
+    var months = [
+        'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
+        'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    var re = /^\s*Enregistré à la présidence\sde l['’]Assemblée nationale\s+le (\d+|1er)\s+(.+)\s+(\d{4})\s*\.?$/im;
+    var match = re.exec(md);
+
+    if (!match)
+        return null;
+
+    var day = match[1] == '1er' ? '1' : match[1];
+    var month = months.indexOf(match[2]) + 1;
+    var year = match[3];
+
+    return new Date(year + '-' + month + '-' + day);
 }
