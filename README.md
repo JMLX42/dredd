@@ -31,7 +31,7 @@ To debug the API, you can run it directly in your terminal and have the (error) 
 
 ## Admin
 
-The admin interface is available at [http://anapi.fr.test](http://anapi.fr.test). You must sign in with the following credentials:
+The admin interface is available at [http://anapi.fr.test/keystone](http://anapi.fr.test/keystone). You must sign in with the following credentials:
 
 * e-mail: admin@anapi.fr.test
 * password: admin
