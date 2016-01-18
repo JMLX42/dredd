@@ -9,5 +9,5 @@ var routes = {
 // Setup Route Bindings
 exports = module.exports = function(app) {
 	app.get('/bill/list', keystone.middleware.api, routes.api.bill.list);
-	app.get('/bill/get/:legislature/:number', keystone.middleware.api, routes.api.bill.get);
+	app.get('/bill/:legislature/:number', keystone.middleware.api, routes.api.bill.get);
 };

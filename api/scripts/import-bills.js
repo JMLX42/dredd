@@ -43,9 +43,9 @@ module.exports = function(legislature, force, done)
                                     number,
                                     function(md)
                                     {
-                                        var recordingDate = getRecordingDate(md);
+                                        var registrationDate = getRegistrationDate(md);
 
-                                        if (recordingDate === null)
+                                        if (registrationDate === null)
                                             console.log('\terror: could not parse recording date');
 
                                         if (!bill)
@@ -54,17 +54,16 @@ module.exports = function(legislature, force, done)
                                                 legislature: legislature,
                                                 number: number,
                                                 text: { md: md },
-                                                recordingDate: recordingDate,
+                                                registrationDate: registrationDate,
                                                 importDate: Date.now()
                                             });
                                         }
                                         else
                                         {
                                             bill.md = md;
-                                            bill.recordingDate = recordingDate;
+                                            bill.registrationDate = registrationDate;
                                             bill.importDate = Date.now();
                                         }
-                                        console.log(getRecordingDate(md));
 
                                         bill.save(function(err)
                                         {
@@ -205,7 +204,7 @@ function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
         });
 }
 
-function getRecordingDate(md)
+function getRegistrationDate(md)
 {
     var months = [
         'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',

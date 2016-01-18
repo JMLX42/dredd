@@ -9,7 +9,7 @@ var Bill = new keystone.List('Bill', {
 Bill.add({
     legislature: { type: Types.Number, required: true, initial: true },
     number: { type: Types.Number, required: true, initial: true },
-    recordingDate: { type: Types.Date, required: true, initial: true },
+    registrationDate: { type: Types.Date, required: true, initial: true },
     importDate: { type: Types.Datetime, required: true, initial: true },
 	text: { type: Types.Markdown, wysiwyg: true, height: 400 }
 });

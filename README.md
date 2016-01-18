@@ -40,11 +40,35 @@ The admin interface is available at [http://anapi.fr.test/keystone](http://anapi
 
 ### Listing bills
 
+#### URI
+
 `/api/bill/list`
+
+#### Parameters
+
+* `before`, fetch only the bills that were registered before this date (formatted as YYYY-MM-DD)
+* `after`,  fetch only the bills that were registered after this date (formatted as YYYY-MM-DD)
+* `importedBefore`, fetch only the bills that were imported before this date (formatted as YYYY-MM-DD)
+* `importedAfter`,  fetch only the bills that were imported after this date (formatted as YYYY-MM-DD)
+
+#### Examples
+
+`/api/bill/list?after=2015-09-15&before=2016-01-01`
 
 ### Get a specific bill
 
-`/api/bill/get/:legislature/:number`
+#### URI
+
+`/api/bill/:legislature/:number`
+
+#### Parameters
+
+* `:legislature`, the number of the legislature of the bill
+* `:number`, the number of the bill
+
+#### Examples
+
+`/api/bill/14/3378`
 
 ## Licence
 
