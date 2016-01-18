@@ -79,6 +79,10 @@ The admin interface is available at [http://anapi.fr.test/keystone](http://anapi
 
 `/api/bill/14/3378`
 
+`/api/bill/14/3393?format=md`
+
+`/api/bill/14/3128?format=html`
+
 ## Licence
 
 MIT
