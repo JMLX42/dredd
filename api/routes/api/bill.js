@@ -27,7 +27,6 @@ exports.list = function(req, res)
 
 exports.get = function(req, res)
 {
-    console.log(req.query);
     Bill.model
         .findOne({
             legislature : req.params.legislature,
