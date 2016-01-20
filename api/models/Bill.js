@@ -1,5 +1,6 @@
 var keystone = require('keystone');
 var transform = require('model-transform');
+var elasticsearch = require('elasticsearch');
 
 var Types = keystone.Field.Types;
 
@@ -12,6 +13,33 @@ Bill.add({
     registrationDate: { type: Types.Date, required: true, initial: true },
     importDate: { type: Types.Datetime, required: true, initial: true },
 	text: { type: Types.Textarea, height: 400 }
+});
+
+Bill.schema.pre('save', function(next)
+{
+    var connectionString = 'http://127.0.0.1:9200';
+    var client = new elasticsearch.Client({
+        host: connectionString
+    });
+
+    client.index(
+        {
+            index : 'bill',
+            type : 'document',
+            id : this.id,
+            body : {
+                legislature : this.legislature,
+                number : this.number,
+                text : this.text
+            }
+        },
+        function (error, response)
+        {
+            console.log(response);
+        }
+    );
+
+    next();
 });
 
 transform.toJSON(Bill);
