@@ -97,6 +97,7 @@ None.
 #### Examples
 
 `/api/bill/search?query=numérique`
+
 `/api/bill/search?query=travail&before=2014-04-15`
 
 ## Licence
