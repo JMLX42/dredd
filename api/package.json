@@ -1,5 +1,5 @@
 {
-  "name": "anapi",
+  "name": "dredd",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -17,6 +17,7 @@
       "keystone": "^0.3.13",
       "model-transform": "^1.1.0",
       "async": "latest",
-      "marked": "latest"
+      "marked": "latest",
+      "elasticsearch": "latest"
   }
 }
