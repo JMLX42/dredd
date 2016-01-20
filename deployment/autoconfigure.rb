@@ -95,6 +95,8 @@ module AutoConfigure
 
   def _write(inventory, filename)
 
+    FileUtils.mkdir_p(File.dirname(filename));
+
     File.open(filename,"w") do |f|
       f.write("// Auto-generated (autoconfigure.rb)\n")
       f.write(JSON.pretty_generate(inventory))
