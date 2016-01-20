@@ -54,10 +54,7 @@ The admin interface is available at [http://dredd.fr.test/keystone](http://dredd
 
 #### Parameters
 
-* `before`, fetch only the bills that were registered before this date (formatted as YYYY-MM-DD)
-* `after`,  fetch only the bills that were registered after this date (formatted as YYYY-MM-DD)
-* `importedBefore`, fetch only the bills that were imported before this date (formatted as YYYY-MM-DD)
-* `importedAfter`,  fetch only the bills that were imported after this date (formatted as YYYY-MM-DD)
+None.
 
 #### Examples
 
@@ -82,6 +79,20 @@ The admin interface is available at [http://dredd.fr.test/keystone](http://dredd
 `/api/bill/14/3393?format=md`
 
 `/api/bill/14/3128?format=html`
+
+### Search for bills
+
+#### URI
+
+`/api/bill/search`
+
+#### Parameters
+
+* `query`, a text query to match
+* `before`, fetch only the bills that were registered before this date (formatted as YYYY-MM-DD)
+* `after`,  fetch only the bills that were registered after this date (formatted as YYYY-MM-DD)
+* `importedBefore`, fetch only the bills that were imported before this date (formatted as YYYY-MM-DD)
+* `importedAfter`,  fetch only the bills that were imported after this date (formatted as YYYY-MM-DD)
 
 ## Licence
 
