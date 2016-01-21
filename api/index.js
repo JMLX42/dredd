@@ -3,8 +3,8 @@ var keystone = require('keystone');
 
 keystone.init({
 
-	'name': 'anapi',
-	'brand': 'anapi',
+	'name': 'dredd',
+	'brand': 'Dredd - "I am the Law!"',
 
 	'favicon': 'public/favicon.ico',
 	'view engine': 'jade',
