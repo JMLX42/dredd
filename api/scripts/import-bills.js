@@ -155,12 +155,6 @@ function fetchBillNumbers(legislature, callback)
 
 function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
 {
-    console.log("http://www.assemblee-nationale.fr/"
-        + legislature
-        + "/projets/pl"
-        + id
-        + ".asp"
-    );
     request(
         {
             uri: "http://www.assemblee-nationale.fr/"
