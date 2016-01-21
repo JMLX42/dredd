@@ -43,39 +43,56 @@ module.exports = function(legislature, force, done)
                                     number,
                                     function(text)
                                     {
-                                        var registrationDate = getRegistrationDate(text);
+                                        getRegistrationDate(
+                                            legislature,
+                                            number,
+                                            text,
+                                            function(registrationDate)
+                                            {
+                                                console.log(registrationDate)
+                                                if (!bill)
+                                                {
+                                                    bill = Bill.model({
+                                                        legislature: legislature,
+                                                        number: number,
+                                                        text: text,
+                                                        registrationDate: registrationDate,
+                                                        importDate: Date.now()
+                                                    });
+                                                }
+                                                else
+                                                {
+                                                    bill.text = text;
+                                                    bill.registrationDate = registrationDate;
+                                                    bill.importDate = Date.now();
+                                                }
 
-                                        if (registrationDate === null)
-                                            console.log('\terror: could not parse recording date');
+                                                bill.save(function(err)
+                                                {
+                                                    console.log('\tok: imported');
+                                                    return callback(err);
+                                                });
 
-                                        if (!bill)
-                                        {
-                                            bill = Bill.model({
-                                                legislature: legislature,
-                                                number: number,
-                                                text: text,
-                                                registrationDate: registrationDate,
-                                                importDate: Date.now()
-                                            });
-                                        }
-                                        else
-                                        {
-                                            bill.text = text;
-                                            bill.registrationDate = registrationDate;
-                                            bill.importDate = Date.now();
-                                        }
-
-                                        bill.save(function(err)
-                                        {
-                                            console.log('\tok: imported');
-                                            return callback(err);
-                                        });
+                                            },
+                                            function(err)
+                                            {
+                                                console.log('\terror: could not parse recording date');
+                                                return callback();
+                                            }
+                                        );
                                     },
                                     function(body)
                                     {
-                                        console.log('\terror: could not parse text');
-
-                                        numErrors++;
+                                        if (body.indexOf('pas encore édité') >= 0)
+                                        {
+                                            numSkipped++;
+                                            console.log('\tskip: not yet available');
+                                        }
+                                        else
+                                        {
+                                            numErrors++;
+                                            console.log('\terror: could not parse text');
+                                        }
 
                                         return callback();
                                     }
@@ -128,9 +145,8 @@ function fetchBillNumbers(legislature, callback)
             );
 
             var numbers = [];
-
             while ((projectAnchors = re.exec(body)) !== null)
-                numbers.push(parseInt(projectAnchors[1]));
+                numbers.push(projectAnchors[1]);
 
             callback(numbers);
         }
@@ -139,6 +155,12 @@ function fetchBillNumbers(legislature, callback)
 
 function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
 {
+    console.log("http://www.assemblee-nationale.fr/"
+        + legislature
+        + "/projets/pl"
+        + id
+        + ".asp"
+    );
     request(
         {
             uri: "http://www.assemblee-nationale.fr/"
@@ -156,9 +178,8 @@ function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
                 text.indexOf('<div style="margin-left: 2%; margin-right: 2%; margin-top: 2%; width: 95%">')
             );
             var end = text.indexOf('<hr size="1" noshade>');
-
             if (begin < 0 || end < 0 || end < begin)
-                return errorCallback && errorCallback(body);
+                return errorCallback && errorCallback(text);
 
             text = text.substring(begin, end);
 
@@ -182,7 +203,32 @@ function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
         });
 }
 
-function getRegistrationDate(text)
+function guessRecordingYear(legislature, number, day, month, successCallback, errorCallback)
+{
+    Bill.model.findOne({legislature:legislature, number: {$gt:number}})
+        .sort('number')
+        .select('-text')
+        .exec(function(err, nextBill)
+        {
+            if (err)
+                return errorCallback(err);
+
+            if (month > nextBill.registrationDate.getMonth() + 1)
+                return successCallback(new Date(
+                    (nextBill.registrationDate.getFullYear() - 1)
+                    + '-' + month
+                    + '-' + day
+                ));
+            else
+                return successCallback(new Date(
+                    nextBill.registrationDate.getFullYear()
+                    + '-' + month
+                    + '-' + day
+                ));
+        });
+}
+
+function getRegistrationDate(legislature, number, text, successCallback, errorCallback)
 {
     var months = [
         'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
@@ -192,11 +238,24 @@ function getRegistrationDate(text)
     var match = re.exec(text);
 
     if (!match)
-        return null;
+    {
+        // Sometimes, the year is not specified. So we will have to fetch the day & month
+        // and guess the year based on those values + the values of the "next" bill.
+        var re = /^\s*Enregistré à la présidence\sde l['’]Assemblée nationale\s+le (\d+|1er)\s+(.+)\.$/im;
+        var match = re.exec(text);
+
+        if (!match)
+            return errorCallback(null);
+
+        var day = match[1] == '1er' ? '1' : match[1];
+        var month = months.indexOf(match[2]) + 1;
+
+        return guessRecordingYear(legislature, number, day, month, successCallback, errorCallback);
+    }
 
     var day = match[1] == '1er' ? '1' : match[1];
     var month = months.indexOf(match[2]) + 1;
     var year = match[3];
 
-    return new Date(year + '-' + month + '-' + day);
+    return successCallback(new Date(year + '-' + month + '-' + day));
 }
