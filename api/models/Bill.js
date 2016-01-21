@@ -8,9 +8,9 @@ var Bill = new keystone.List('Bill', {
 });
 
 Bill.add({
-    legislature: { type: Types.Number, required: true, initial: true },
-    number: { type: Types.Number, required: true, initial: true },
-    registrationDate: { type: Types.Date, required: true, initial: true },
+    legislature: { type: Types.Number, required: true, initial: true, index: true },
+    number: { type: Types.Number, required: true, initial: true, index: true },
+    registrationDate: { type: Types.Date, required: true, initial: true, index: true },
     importDate: { type: Types.Datetime, required: true, initial: true },
 	text: { type: Types.Textarea, height: 400 }
 });
@@ -35,7 +35,7 @@ Bill.schema.pre('save', function(next)
         },
         function (error, response)
         {
-            console.log(response);
+            // console.log(response);
         }
     );
 
