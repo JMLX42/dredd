@@ -49,7 +49,6 @@ module.exports = function(legislature, force, done)
                                             text,
                                             function(registrationDate)
                                             {
-                                                console.log(registrationDate)
                                                 if (!bill)
                                                 {
                                                     bill = Bill.model({
@@ -76,7 +75,9 @@ module.exports = function(legislature, force, done)
                                             },
                                             function(err)
                                             {
+                                                numErrors++;
                                                 console.log('\terror: could not parse recording date');
+
                                                 return callback();
                                             }
                                         );
@@ -100,9 +101,8 @@ module.exports = function(legislature, force, done)
                             }
                             else
                             {
-                                console.log('\tskip: already imported');
-
                                 numSkipped++;
+                                console.log('\tskip: already imported');
 
                                 return callback();
                             }
@@ -199,6 +199,7 @@ function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
 
 function guessRecordingYear(legislature, number, day, month, successCallback, errorCallback)
 {
+    console.log('\twarning: missing registration year, guessing based on the next bill')
     Bill.model.findOne({legislature:legislature, number: {$gt:number}})
         .sort('number')
         .select('-text')
@@ -228,14 +229,14 @@ function getRegistrationDate(legislature, number, text, successCallback, errorCa
         'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet',
         'août', 'septembre', 'octobre', 'novembre', 'décembre'
     ];
-    var re = /^\s*Enregistré à la présidence\sde l['’]Assemblée nationale\s+le (\d+|1er)\s+(.+)\s+(\d{4})\s*\.?$/im;
+    var re = /^\s*enregistrée? à la présidence\sde l['’]assemblée nationale\s+le (\d+|1er)\s+(.+)\s+(\d{4})\s*\.?$/im;
     var match = re.exec(text);
 
     if (!match)
     {
         // Sometimes, the year is not specified. So we will have to fetch the day & month
         // and guess the year based on those values + the values of the "next" bill.
-        var re = /^\s*Enregistré à la présidence\sde l['’]Assemblée nationale\s+le (\d+|1er)\s+(.+)\.$/im;
+        var re = /^\s*enregistrée? à la présidence\sde l['’]assemblée nationale\s+le (\d+|1er)\s+(.+)\.$/im;
         var match = re.exec(text);
 
         if (!match)
