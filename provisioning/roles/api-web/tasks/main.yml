@@ -47,12 +47,13 @@
   failed_when: result.stderr
 
 - name: initialize bill database
-  shell: headstone {{ dredd_api_dir }}/scripts/import-bills.js --legislature 14
+  shell: headstone {{ dredd_api_dir }}/scripts/import-bills.js --legislature {{ item }}
   args:
     chdir: "{{ dredd_api_dir }}"
   register: result
   changed_when: "'ok: imported' in result.stdout"
   failed_when: result.stderr
+  with_items: dredd_legislatures
 
 - name: install upstart script
   template: src={{ role_name }}.upstart.conf.j2 dest=/etc/init/{{ project_name }}-{{ role_name }}.conf

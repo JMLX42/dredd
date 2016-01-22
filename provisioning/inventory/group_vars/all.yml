@@ -12,3 +12,6 @@ api_db_private_host: 127.0.0.1
 api_db_private_port: 27017
 
 dredd_api_dir: /vagrant/api
+dredd_legislatures:
+    - 14 # 480 imported (or skipped), 0 errors
+    # - 13 # 610 imported (or skipped), 6 errors
