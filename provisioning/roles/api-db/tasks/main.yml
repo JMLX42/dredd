@@ -29,3 +29,6 @@
 
 - name: install elasticsearch
   apt: name=elasticsearch state=present
+
+- name: make sure elasticsearch starts on boot
+  service: name=elasticsearch enabled=yes
