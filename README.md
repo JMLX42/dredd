@@ -58,7 +58,7 @@ None.
 
 #### Examples
 
-`/api/bill/list?after=2015-09-15&before=2016-01-01`
+`/api/bill/list`
 
 ### Get a specific bill
 
