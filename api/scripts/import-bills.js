@@ -7,45 +7,50 @@ var request  = require('request');
 
 var Bill = keystone.list('Bill');
 
-module.exports = function(legislature, force, done)
+module.exports = function(legislature, force, bill, done)
 {
-    console.log('importing bills for legislature', legislature);
+    console.log('fetching bills for legislature', legislature);
 
     var numErrors = 0;
     var numSkipped = 0;
+    var importSpecificBill = !!bill;
+    var billNumberToImport = importSpecificBill ? parseInt(bill) : 0;
 
-    fetchBillNumbers(
+    fetchBillURIs(
         legislature,
-        function(numbers)
+        function(uris)
         {
-            console.log(numbers.length + ' bills to import');
+            console.log(uris.length + ' bills fetched');
 
             var numImportedBills = 0;
 
-            var ops = numbers.map(function(number)
+            var ops = uris.map(function(uri)
             {
                 return function(callback)
                 {
+                    var billNumber = getBillNumber(uri);
+
                     console.log(
-                        '(' + ++numImportedBills + '/' + numbers.length
-                        + ') importing bill ' + number
+                        Math.ceil(numImportedBills / uris.length * 100) + '%'
+                        + '\t(' + ++numImportedBills + '/' + uris.length
+                        + ') importing bill ' + billNumber
                     );
-                    Bill.model.findOne({legislature : legislature, number : number})
+                    Bill.model.findOne({legislature : legislature, number : billNumber})
                         .exec(function(err, bill)
                         {
                             if (err)
                                 return callback(err);
 
-                            if (!bill || force == 'true')
+                            if (!bill || force == 'true' || (importSpecificBill && billNumber == billNumberToImport))
                             {
                                 fetchBillMarkdown(
                                     legislature,
-                                    number,
+                                    uri,
                                     function(text)
                                     {
                                         getRegistrationDate(
                                             legislature,
-                                            number,
+                                            billNumber,
                                             text,
                                             function(registrationDate)
                                             {
@@ -53,7 +58,7 @@ module.exports = function(legislature, force, done)
                                                 {
                                                     bill = Bill.model({
                                                         legislature: legislature,
-                                                        number: number,
+                                                        number: billNumber,
                                                         text: text,
                                                         registrationDate: registrationDate,
                                                         importDate: Date.now()
@@ -116,8 +121,8 @@ module.exports = function(legislature, force, done)
                     console.log(error);
 
                 console.log(
-                    'total: ' + numbers.length
-                    + ', success: ' + (numbers.length - numErrors - numSkipped)
+                    'total: ' + uris.length
+                    + ', success: ' + (uris.length - numErrors - numSkipped)
                     + ', skipped: ' + numSkipped
                     + ', error: ' + numErrors
                 );
@@ -128,50 +133,53 @@ module.exports = function(legislature, force, done)
     );
 }
 
-function fetchBillNumbers(legislature, callback)
+function getBillNumber(uri)
+{
+    var re = /(pion|pl)(\d+)/g;
+    var match = re.exec(uri);
+
+    return parseInt(match[2]);
+}
+
+function fetchBillURIs(legislature, callback)
 {
     request(
         {
-            uri: "http://www.assemblee-nationale.fr/"
+            uri: "http://www2.assemblee-nationale.fr/documents/liste/(type)/depots/(archives)/index-depots/(limit)/999999999999/(legis)/"
                 + legislature
-                + "/documents/index-projets.asp"
         },
         function(error, response, body)
         {
             var projectAnchors = null;
             var re = new RegExp(
-                '<a href="/' + legislature + '/projets/pl(\\\d+).asp"',
+                '<a href="(/documents/notice/' + legislature + '/(propositions|projets)/(pion|pl)\\\d+/\\\(index\\\)/depots)"',
                 'g'
             );
 
-            var numbers = [];
+            var uris = [];
             while ((projectAnchors = re.exec(body)) !== null)
-                numbers.push(projectAnchors[1]);
+                uris.push('http://www2.assemblee-nationale.fr' + projectAnchors[1]);
 
-            callback(numbers);
+            callback(uris);
         }
     );
 }
 
-function fetchBillMarkdown(legislature, id, successCallback, errorCallback)
+function fetchBillMarkdown(legislature, uri, successCallback, errorCallback)
 {
     request(
         {
-            uri: "http://www.assemblee-nationale.fr/"
-                + legislature
-                + "/projets/pl"
-                + id
-                + ".asp",
-            encoding: null
+            uri: uri
         },
         function(error, response, body)
         {
-            var text = iconv.decode(new Buffer(body), "ISO-8859-1");
+            var text = body;
             var begin = text.indexOf(
                 '<!-- Contenu -->',
-                text.indexOf('<div style="margin-left: 2%; margin-right: 2%; margin-top: 2%; width: 95%">')
+                text.indexOf('<div class="interieur-contenu-principal"')
             );
-            var end = text.indexOf('<hr size="1" noshade>');
+            var end = text.indexOf('<hr size="1" noshade="noshade"/>');
+
             if (begin < 0 || end < 0 || end < begin)
                 return errorCallback && errorCallback(text);
 
