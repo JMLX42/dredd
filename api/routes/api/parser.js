@@ -144,8 +144,6 @@ function parseLawReference(tokens, i, parent) {
     // sip 'loi' and the following space
     i += 2;
 
-    console.log('parse law ? ', tokens[i], tokens[i + 2], tokens[i + 4]);
-
     if (tokens[i] = 'organique') {
 
         i = skipToToken(tokens, i, 'n°') + 1;
@@ -249,14 +247,24 @@ function parseArticlePartReference(tokens, i, parent) {
 
         parent.children.push(node);
     }
-    // Le {partNumber} de l’article {articleNumber} de {lawReference}
-    else if (tokens[i].toLowerCase() == 'le' && isRomanNumber(tokens[i + 2])) {
-        node.partType = 'article';
+    // le {partNumber} de l’article {articleNumber} de {lawReference}
+    // du {partNumber} de l’article {articleNumber}
+    else if ((tokens[i].toLowerCase() == 'le' || tokens[i].toLowerCase() == 'du') && isRomanNumber(tokens[i + 2])) {
+        node.partType = 'header-1';
         node.partNumber = parseRomanNumber(tokens[i + 2]);
 
         // find 'article'
         i = skipTokens(tokens, i, function(t) { return t.indexOf('article') < 0 });
         i = parseArticleReference(tokens, i, node);
+
+        parent.children.push(node);
+    }
+    // après le 2° du IV de l’article L. 5211-6-1 du code général des collectivités territoriales
+    else if (tokens[i].toLowerCase() == 'après') {
+        node.partType = 'header-2';
+        node.partNumber = parseInt(tokens[i + 4]);
+
+        i = parseArticlePartReference(tokens, i + 6, node);
 
         parent.children.push(node);
     }
@@ -312,6 +320,19 @@ function parseArticleEdit(tokens, i, parent) {
         }
 
         i = skipToEndOfLine(tokens, i);
+
+        parent.children.push(node);
+    }
+    else if (tokens[i].toLowerCase() == 'après') {
+        i = parseArticlePartReference(tokens, i, node);
+        i = skipToToken(tokens, i, ',');
+
+        if (tokens[i + 6] == 'inséré') {
+            node.editType = 'add';
+
+            i = skipToToken(tokens, i, '«');
+            i = parseSentencePart(tokens, i, node);
+        }
 
         parent.children.push(node);
     }
