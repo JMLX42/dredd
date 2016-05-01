@@ -11,6 +11,5 @@ exports = module.exports = function(app) {
 	app.get('/bill/list', keystone.middleware.api, routes.api.bill.list);
 	app.get('/bill/search', keystone.middleware.api, routes.api.bill.search);
 	app.get('/bill/:legislature/:number', keystone.middleware.api, routes.api.bill.get);
-
-	app.get('/parser/parse/:legislature/:number', keystone.middleware.api, routes.api.parser.parse);
+	app.get('/bill/parse/:legislature/:number', keystone.middleware.api, routes.api.bill.parse);
 };

@@ -2,6 +2,8 @@ var keystone = require('keystone');
 var marked = require('marked');
 var elasticsearch = require('elasticsearch');
 
+var BillTextParser = require('../../helper/BillTextParser');
+
 var Bill = keystone.list('Bill');
 
 exports.list = function(req, res)
@@ -38,6 +40,30 @@ exports.get = function(req, res)
                 bill.text = marked(toMarkdown(bill.text));
 
             return res.apiResponse({bill : bill});
+        });
+}
+
+exports.parse = function(req, res) {
+    Bill.model
+        .findOne({
+            legislature : req.params.legislature,
+            number : req.params.number
+        })
+        .exec(function(err, bill)
+        {
+            if (err)
+                return res.apiError('database error', err);
+
+            if (!bill)
+                res.status(404).send();
+
+            var parser = new BillTextParser();
+            var ast = parser.parse(bill.text);
+
+            return res.apiResponse({
+                ast:parser.getSerializableAST(),
+                // tokens:tokens
+            });
         });
 }
 
