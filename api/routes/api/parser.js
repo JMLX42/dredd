@@ -109,15 +109,15 @@ function isNumberWord(word) {
 
 function wordToNumber(word) {
     var words = [
-        ['premier', 'première'],
-        ['second',  'seconde'],
-        ['troisième'],
-        ['quatrième'],
-        ['cinquième'],
-        ['sixième'],
-        ['septième'],
-        ['huitième'],
-        ['neuvième']
+        ['un', 'une', 'premier', 'première'],
+        ['deux', 'deuxième', 'second', 'seconde'],
+        ['trois', 'troisième'],
+        ['quatre', 'quatrième'],
+        ['cinq', 'cinquième'],
+        ['six', 'sixième'],
+        ['sept', 'septième'],
+        ['huit', 'huitième'],
+        ['neuf', 'neuvième']
     ];
 
     for (var i = 0; i < words.length; ++i) {
@@ -359,12 +359,11 @@ function parseArticlePartReference(tokens, i, parent) {
     else if (['le'].indexOf(tokens[i].toLowerCase()) >= 0 && tokens[i + 2] == 'même') {
         // "le même {number} {part}" or "le même {part}"
         if (tokens[i + 4] == 'alinéa' || tokens[i + 6] == 'alinéa') {
-            // FIXME: find the corresponding object, add it again to the tree
-
             var alineas = searchNode(getRoot(parent), function(n) {
                 return n.type == 'article-part-reference' && n.partType == 'alinea'
             });
 
+            // the last one in order of traversal is the previous one in order of syntax
             node.children.push(alineas[alineas.length - 1]);
 
             node.partType = 'alinea';
@@ -473,6 +472,15 @@ function parseArticleEdit(tokens, i, parent) {
         i = parseReference(tokens, i + 6, node);
         i = skipToEndOfLine(tokens, i);
     }
+    // est complété par
+    else if (tokens[i + 2] == 'complété') {
+        node.editType = 'add';
+
+        console.log('foo');
+
+        i = parseReference(tokens, i + 6, node);
+        i = skipToEndOfLine(tokens, i);
+    }
     // est abrogé
     else if (tokens[i + 2] == 'abrogé') {
         node.editType = 'delete';
@@ -545,7 +553,10 @@ function parseReference(tokens, i, parent) {
     else if (tokens[i].toLowerCase() == 'le' && tokens[i + 2] == 'code') {
         i = parseCodeReference(tokens, i + 2, parent);
     }
-    else if (tokens[i].toLowerCase() == 'les' && tokens[i + 2] == 'mots') {
+    // les mots
+    // {number} phrase(s) ainsi rédigée(s)
+    else if ((tokens[i].toLowerCase() == 'les' && tokens[i + 2] == 'mots')
+        || (isNumberWord(tokens[i]) && tokens[i + 2].indexOf('phrase') >= 0)) {
         i = skipToQuoteStart(tokens, i);
         i = parseQuotePart(tokens, i, parent);
         i = skipSpaces(tokens, i);
