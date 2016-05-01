@@ -417,12 +417,24 @@ function parseArticleEdit(tokens, i, parent) {
 
         parent.children.push(node);
     }
+    // est remplacé par
+    // sont remplacés par
+    else if (tokens[i + 2].indexOf('remplacé') >= 0) {
+        node.editType = 'edit';
+
+        // skip "est remplacé par" or "sont remplacé par"
+        i += 6;
+
+        i = parseReference(tokens, i, node);
+
+        parent.children.push(node);
+    }
     // il est inséré
     // il est ajouté
     else if (tokens[i + 4] == 'inséré' || tokens[i + 4] == 'ajouté') {
         node.editType = 'add';
 
-        i = parseArticlePartReference(tokens, i + 6, node);
+        i = parseReference(tokens, i + 6, node);
         i = skipToEndOfLine(tokens, i);
 
         parent.children.push(node);
@@ -491,7 +503,9 @@ function parseCodeReference(tokens, i, parent) {
 }
 
 function parseReference(tokens, i, parent) {
-    i = skipSpaces(tokens, i);
+    console.log('parseReference', tokens.slice(i, i + 5).join(''));
+    // i = skipSpaces(tokens, i);
+    i = skipToNextWord(tokens, i);
 
     // L’article L. 260 du code électoral
     if (tokens[i].toLowerCase() == 'l' && tokens[i + 1] == '’' && tokens[i + 2] == 'article') {
