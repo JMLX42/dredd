@@ -196,8 +196,12 @@ function parseArticleReference(tokens, i, parent) {
         return i;
     }
 
-    // sip 'article' and the following space
-    if (tokens[i] != 'L') {
+    // skip "l’article" and the following space
+    if (tokens[i].toLowerCase() == 'l' && tokens[i + 1] == '’' && tokens[i + 2] == 'article') {
+        i += 4;
+    }
+    // skip "article" and the following space
+    else if (tokens[i].indexOf('article') >= 0) {
         i += 2;
     }
 
@@ -244,6 +248,11 @@ function parseArticlePartReference(tokens, i, parent) {
         node.partOffset = 'end';
         i += 4;
     }
+    // à la fin du {article}
+    else if (tokens[i].toLowerCase() == 'à' && tokens[i + 2] == 'la' && tokens[i + 4] == 'fin') {
+        node.partOffset = 'end';
+        i += 6;
+    }
 
     // la {partNumber} {partType}
     // de la {partNumber} {partType}
@@ -253,7 +262,7 @@ function parseArticlePartReference(tokens, i, parent) {
         i += tokens[i + 2].toLowerCase() == 'la' ? 4 : 2;
 
         if (tokens[i + 2] == 'phrase') {
-            node.partType == 'sentence';
+            node.partType == 'quote';
             node.partNumber = wordToNumber(tokens[i]);
 
             i = parseArticlePartReference(tokens, i + 4, node);
@@ -283,16 +292,24 @@ function parseArticlePartReference(tokens, i, parent) {
         node.partType = 'header-2';
         node.partNumber = parseInt(tokens[i + 2]);
 
-        if (tokens[i + 4] == 'bis') {
+        i += 4;
+
+        if (tokens[i] == 'bis') {
             node.isBis = true;
-            i += 4;
+            i += 2;
         }
-        else if (tokens[i + 6] == 'ter') {
+        else if (tokens[i] == 'ter') {
             node.isTer = true;
-            i += 4;
+            i += 2;
         }
 
-        i = parseArticlePartReference(tokens, i + 4, node);
+        i = parseArticlePartReference(tokens, i, node);
+
+        // ainsi rédigé
+        if (tokens[i + 2] == 'rédigé') {
+            i = skipToQuoteStart(tokens, i + 2);
+            i = parseQuotePart(tokens, i, node);
+        }
 
         parent.children.push(node);
     }
@@ -326,13 +343,27 @@ function parseArticlePartReference(tokens, i, parent) {
 
         parent.children.push(node);
     }
+    // un {partType}
+    else if (['un'].indexOf(tokens[i].toLowerCase()) >= 0) {
+        if (tokens[i + 2] == 'alinéa') {
+            node.partType = 'alinea';
+
+            // ainsi rédigé
+            if (tokens[i + 6] == 'rédigé') {
+                i = skipToQuoteStart(tokens, i + 6);
+                i = parseQuotePart(tokens, i, node);
+            }
+
+            parent.children.push(node);
+        }
+    }
 
     return i;
 }
 
-function parseSentencePart(tokens, i, parent) {
+function parseQuotePart(tokens, i, parent) {
     var node = {
-        type: 'sentence-part',
+        type: 'quote',
         words: ''
     };
 
@@ -365,25 +396,21 @@ function parseArticleEdit(tokens, i, parent) {
         children: []
     };
 
-    i = parseReference(tokens, i, node);
+    i = parseForEach(parseReference, tokens, i, node);
+    // i = parseReference(tokens, i, node);
     i = skipToNextWord(tokens, i, node);
 
-    // les mots : {sentencePartReference} sont {editType} ;
-    if (tokens[i].toLowerCase() == 'les' && tokens[i + 2] == 'mots') {
-        i = skipToQuoteStart(tokens, i);
-        i = parseSentencePart(tokens, i, node);
-        i = skipSpaces(tokens, i);
-
-        if (tokens[i + 2] == 'supprimés') {
-            node.editType = 'delete';
-        }
+    // sont supprimés
+    // est supprimé
+    if (tokens[i + 2].indexOf('supprimé') >= 0) {
+        node.editType = 'delete';
 
         i = skipToEndOfLine(tokens, i);
 
         parent.children.push(node);
     }
     // est ainsi modifié
-    else if (tokens[i] == 'est' && tokens[i + 4] == 'modifié') {
+    else if (tokens[i + 4] == 'modifié') {
         node.editType = 'edit';
 
         i = skipToEndOfLine(tokens, i);
@@ -391,22 +418,17 @@ function parseArticleEdit(tokens, i, parent) {
         parent.children.push(node);
     }
     // il est inséré
-    else if (tokens[i + 2] == 'est' && tokens[i + 4] == 'inséré') {
+    // il est ajouté
+    else if (tokens[i + 4] == 'inséré' || tokens[i + 4] == 'ajouté') {
         node.editType = 'add';
 
         i = parseArticlePartReference(tokens, i + 6, node);
-
-        if (tokens[i] == 'rédigé') {
-            i = skipToQuoteStart(tokens, i);
-            i = parseSentencePart(tokens, i, node);
-        }
-
         i = skipToEndOfLine(tokens, i);
 
         parent.children.push(node);
     }
     // est abrogé
-    else if (tokens[i] == 'est' && tokens[i + 2] == 'abrogé') {
+    else if (tokens[i + 2] == 'abrogé') {
         node.editType = 'delete';
 
         i = skipToEndOfLine(tokens, i);
@@ -478,6 +500,11 @@ function parseReference(tokens, i, parent) {
     else if (tokens[i].toLowerCase() == 'le' && tokens[i + 2] == 'code') {
         i = parseCodeReference(tokens, i + 2, parent);
     }
+    else if (tokens[i].toLowerCase() == 'les' && tokens[i + 2] == 'mots') {
+        i = skipToQuoteStart(tokens, i);
+        i = parseQuotePart(tokens, i, parent);
+        i = skipSpaces(tokens, i);
+    }
     else {
         i = parseArticlePartReference(tokens, i, parent);
     }
@@ -535,7 +562,7 @@ function parseArticleLevel2(tokens, i, parent) {
     }
 
     i = parseArticleEdit(tokens, i, node);
-    i = parseForEach(parseArticleLevel3, tokens, i, parent);
+    i = parseForEach(parseArticleLevel3, tokens, i, node);
 
     if (node.children.length) {
         parent.children.push(node);
