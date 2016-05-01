@@ -6,6 +6,11 @@ const DELIMITERS = /(\s|\(|\)|\.|\!|'|’|,)/;
 const KEYWORD_ARTICLE = 'Article';
 const KEYWORD_NEW_ARTICLE = 'nouveau';
 const KEYWORD_ARTICLE_REFERENCE = 'article';
+const KEYWORD_PARTS = [
+    'article', 'articles',
+    'alinéa', 'alinéas',
+    'phrase', 'phrases'
+];
 const KEYWORD_MONTH_NAMES = [
     'janvier',
     'février',
@@ -70,11 +75,14 @@ function isSpace(token) {
     return !!token.match(/^\s+$/);
 }
 
+function isArticlePart(token) {
+    return KEYWORD_PARTS.indexOf(token) >= 0;
+}
+
 function trimSpaces(s) {
-    // var m = s.match(/^\s*(.*[^\s])\s*$/);
-    //
-    // return m ? s.match(/^\s*(.*[^\s])\s*$/)[1] : s;
-    return s.match(/^\s*(.*[^\s])\s*$/)[1];
+    var m = s.match(/^\s*(.*[^\s])\s*$/);
+
+    return m ? s.match(/^\s*(.*[^\s])\s*$/)[1] : s;
 }
 
 function parseRomanNumber(number) {
@@ -154,15 +162,16 @@ function deleteParent(root) {
 }
 
 function parseLawReference(tokens, i, parent) {
+
+    if (tokens[i].indexOf('loi') < 0) {
+        return i;
+    }
+
     var node = createNode(parent, {
         type: 'law-reference',
         lawId: '',
         children: []
     });
-
-    if (tokens[i].indexOf('loi') < 0) {
-        return i;
-    }
 
     // sip 'loi' and the following space
     i += 2;
@@ -189,18 +198,20 @@ function parseLawReference(tokens, i, parent) {
     return i;
 }
 
+// article {articleId} du code {codeName}, les mots :
+// article {articleId} du code {codeName} est ainsi modifié :
 function parseArticleReference(tokens, i, parent) {
-    // article {articleId} du code {codeName}, les mots :
-    // article {articleId} du code {codeName} est ainsi modifié :
+    console.log('parseArticleReference', '\t\t', tokens.slice(i, i + 10).join(''));
+
+    if (tokens[i].indexOf('article') < 0 && tokens[i] != 'L' && tokens[i + 1] != '.') {
+        return i;
+    }
+
     var node = createNode(parent, {
         type: 'article-reference',
         articleId: '',
         children: []
     });
-
-    if (tokens[i].indexOf('article') < 0 && tokens[i] != 'L' && tokens[i + 1] != '.') {
-        return i;
-    }
 
     // skip "l’article" and the following space
     if (tokens[i].toLowerCase() == 'l' && tokens[i + 1] == '’' && tokens[i + 2] == 'article') {
@@ -237,6 +248,8 @@ function parseArticleReference(tokens, i, parent) {
 }
 
 function parseArticlePartReference(tokens, i, parent) {
+    console.log('parseArticlePartReference', '\t\t', tokens.slice(i, i + 10).join(''));
+
     var node = createNode(parent, {
         type: 'article-part-reference',
         children: [],
@@ -258,7 +271,6 @@ function parseArticlePartReference(tokens, i, parent) {
         node.partOffset = 'end';
         i += 6;
     }
-
 
     // de la {partNumber} {partType}
     if (tokens[i].toLowerCase() == 'de' && tokens[i + 2] == 'la' && isNumberWord(tokens[i + 4])) {
@@ -284,7 +296,6 @@ function parseArticlePartReference(tokens, i, parent) {
             node.partType = 'alinea';
         }
         else if (tokens[i + 4] == 'phrase') {
-            console.log(tokens[i + 2]);
             node.partType = 'sentence';
         }
 
@@ -314,7 +325,7 @@ function parseArticlePartReference(tokens, i, parent) {
         // ainsi rédigé
         if (tokens[i + 2] == 'rédigé') {
             i = skipToQuoteStart(tokens, i + 2);
-            i = parseQuotePart(tokens, i, node);
+            i = parseForEach(parseQuote, tokens, i, node);
         }
     }
     // le {romanPartNumber}
@@ -330,29 +341,62 @@ function parseArticlePartReference(tokens, i, parent) {
         pushNode(parent, node);
     }
     // l'{partType} {partNumber}
-    else if (tokens[i].toLowerCase() == 'l' && tokens[i + 1] == '\'') {
-        i = parseArticlePartReference(tokens, i + 2, node);
+    else if (tokens[i].toLowerCase() == 'l' && tokens[i + 1] == '’') {
+        if (tokens[i + 2] == 'article') {
+            i = parseArticleReference(tokens, i + 2, node);
+        }
+        else {
+            i = parseArticlePartReference(tokens, i + 2, node);
+        }
+    }
+    // de l'{partType} {partNumber}
+    else if (tokens[i].toLowerCase() == 'de' && tokens[i + 2] == 'l' && tokens[i + 3] == '’') {
+        if (tokens[i + 4] == 'article') {
+            i = parseArticleReference(tokens, i + 4, node);
+        }
+        else {
+            i = parseArticlePartReference(tokens, i + 4, node);
+        }
     }
     // des {partType}
     // les {partType}
     else if (['des', 'les'].indexOf(tokens[i].toLowerCase()) >= 0) {
-        i = parseArticleReference(tokens, i + 2, parent);
-        i = skipSpaces(tokens, i);
+        // les mots
+        if (tokens[i + 2] == 'mots') {
+            node.partType = 'sentence';
 
-        if (tokens[i] == 'et') {
-            return parseArticleReference(tokens, i + 2, parent);
+            i = skipToQuoteStart(tokens, i);
+            i = parseForEach(parseQuote, tokens, i, parent);
+            i = skipSpaces(tokens, i);
+        }
+        else {
+            i = parseArticleReference(tokens, i + 2, parent);
+            i = skipSpaces(tokens, i);
+
+            if (tokens[i] == 'et') {
+                return parseArticleReference(tokens, i + 2, parent);
+            }
         }
     }
-    // un {partType}
-    else if (['un'].indexOf(tokens[i].toLowerCase()) >= 0) {
-        if (tokens[i + 2] == 'alinéa') {
+    // {number} {partType}
+    else if (isNumberWord(tokens[i].toLowerCase()) && isArticlePart(tokens[i + 2])) {
+        if (tokens[i + 2].indexOf('alinéa') >= 0) {
             node.partType = 'alinea';
+            i += 4;
+        }
+        else if (tokens[i + 2].indexOf('phrase') >= 0) {
+            node.partType = 'sentence';
+            i += 4;
+        }
+        else if (tokens[i + 2].indexOf('article') >= 0) {
+            i = parseArticleReference(tokens, i + 2, node);
+            console.log('foo', tokens.slice(i, i + 10).join(''));
+        }
 
-            // ainsi rédigé
-            if (tokens[i + 6] == 'rédigé') {
-                i = skipToQuoteStart(tokens, i + 6);
-                i = parseQuotePart(tokens, i, node);
-            }
+        // ainsi rédigé(e)
+        if (tokens[i + 2].indexOf('rédigé') >= 0) {
+            i = skipToQuoteStart(tokens, i + 2);
+            i = parseForEach(parseQuote, tokens, i, node);
         }
     }
     // le même
@@ -404,33 +448,35 @@ function searchNode(root, fn, results) {
     return results;
 }
 
-function parseQuotePart(tokens, i, parent) {
+function parseQuote(tokens, i, parent) {
+    if (tokens[i] != '«') {
+        return i;
+    }
+
     var node = createNode(parent, {
         type: 'quote',
         words: ''
     });
 
-    if (tokens[i] != '«') {
-        return i;
-    }
-
     // skip the '«'
     ++i;
 
-    while (i < tokens.length && tokens[i] != '»') {
+    while (i < tokens.length && tokens[i] != '»' && tokens[i] != '\n') {
         node.words += tokens[i];
         ++i;
     }
+    // node.words = node.words.replace(/«\s/g, '');
     node.words = trimSpaces(node.words);
 
     // skip '»'
     ++i;
+    i = skipSpaces(tokens, i);
 
     return i;
 }
 
 function parseArticleEdit(tokens, i, parent) {
-    console.log('parseArticleEdit', '\t', tokens.slice(i, i + 10).join(''));
+    console.log('parseArticleEdit', '\t\t', tokens.slice(i, i + 10).join(''));
 
     var node = createNode(parent, {
         type: 'article-edit',
@@ -476,8 +522,6 @@ function parseArticleEdit(tokens, i, parent) {
     else if (tokens[i + 2] == 'complété') {
         node.editType = 'add';
 
-        console.log('foo');
-
         i = parseReference(tokens, i + 6, node);
         i = skipToEndOfLine(tokens, i);
     }
@@ -493,7 +537,7 @@ function parseArticleEdit(tokens, i, parent) {
         i = parseNewArticleContent(tokens, i, node);
     }
     else {
-        console.log('cannot understand edit', '\t', tokens.slice(i, i + 10).join(''));
+        console.log('cannot understand edit', '\t\t', tokens.slice(i, i + 10).join(''));
 
         removeNode(parent, node);
     }
@@ -553,14 +597,6 @@ function parseReference(tokens, i, parent) {
     else if (tokens[i].toLowerCase() == 'le' && tokens[i + 2] == 'code') {
         i = parseCodeReference(tokens, i + 2, parent);
     }
-    // les mots
-    // {number} phrase(s) ainsi rédigée(s)
-    else if ((tokens[i].toLowerCase() == 'les' && tokens[i + 2] == 'mots')
-        || (isNumberWord(tokens[i]) && tokens[i + 2].indexOf('phrase') >= 0)) {
-        i = skipToQuoteStart(tokens, i);
-        i = parseQuotePart(tokens, i, parent);
-        i = skipSpaces(tokens, i);
-    }
     else {
         i = parseArticlePartReference(tokens, i, parent);
     }
@@ -601,7 +637,7 @@ function parseArticleHeader1(tokens, i, parent) {
 // {number}°
 // ex: 1°, 2°
 function parseArticleHeader2(tokens, i, parent) {
-    console.log('parseArticleHeader2', '\t', tokens.slice(i, i + 10).join(''));
+    console.log('parseArticleHeader2', '\t\t', tokens.slice(i, i + 10).join(''));
 
     var node = createNode(parent, {
         type: 'header-2',
@@ -630,7 +666,7 @@ function parseArticleHeader2(tokens, i, parent) {
 // {number})
 // ex: a), b), a (nouveau))
 function parseArticleHeader3(tokens, i, parent) {
-    console.log('parseArticleHeader3', '\t', tokens.slice(i, i + 10).join(''));
+    console.log('parseArticleHeader3', '\t\t', tokens.slice(i, i + 10).join(''));
 
     var node = createNode(parent, {
         type: 'header-3',
@@ -676,7 +712,23 @@ function parseArticle(tokens, i, parent) {
 
     i = skipSpaces(tokens, ++i);
     // read the article number and skip it
-    node.articleNumber = parseInt(tokens[i++]);
+    node.articleNumber = parseInt(tokens[i]);
+
+    // Article {number}bis
+    if (!!tokens[i].match(/^.*bis$/)) {
+        node.isBis = true;
+    }
+    else if (!!tokens[i].match(/^.*quater$/)) {
+        node.isQuater = true;
+    }
+    else if (!!tokens[i].match(/^.*ter$/)) {
+        node.isTer = true;
+    }
+    else if (!!tokens[i].match(/^.*quinquies$/)) {
+        node.isQuinquies = true;
+    }
+
+    i++;
 
     node.isNewArticle = false;
     var j = skipSpaces(tokens, i);
